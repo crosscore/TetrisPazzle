@@ -17,16 +17,37 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
     // Grid of placed blocks
     Transform[,] fieldTiles;
 
+    // Game state and speed management
+    private float currentFallSpeed = 1.0f;
+    private bool isGameActive = true;
+
     void Start()
+    {
+        InitializeGame();
+    }
+
+    private void InitializeGame()
     {
         // Initialize the playing field
         fieldTiles = new Transform[FieldWidth, FieldHeight];
+        isGameActive = true;
+        currentFallSpeed = 1.0f;
+
+        // Clear existing blocks if any
+        var existingBlocks = FindObjectsByType<BlockController>(FindObjectsSortMode.None);
+        foreach (var block in existingBlocks)
+        {
+            Destroy(block.gameObject);
+        }
+
         SetupNextBlock();
         SpawnBlock();
     }
 
     void Update()
     {
+        if (!isGameActive) return;
+
         // Continue if current block is still active
         if (currentBlock.enabled) return;
 
@@ -39,16 +60,29 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
             if (IsWithinField(index))
             {
                 fieldTiles[index.x, index.y] = item;
+
+                // Check for game over - if block is placed at or above the top of the field
+                if (index.y >= FieldHeight - 2)
+                {
+                    GameOver();
+                    return;
+                }
             }
             else
             {
-                // Game over condition
-                Debug.LogWarning("Block placed outside field - Game Over");
-                // Add game over handling here
+                GameOver();
                 return;
             }
         }
-        SpawnBlock();
+
+        // Check and clear any completed lines
+        CheckAndClearLines();
+
+        // Spawn next block if game is still active
+        if (isGameActive)
+        {
+            SpawnBlock();
+        }
     }
 
     // Convert world position to grid index
@@ -94,7 +128,7 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
         int rnd = Random.Range(0, prefabBlocks.Count);
         Vector3 setupPosition = new Vector3(2.5f, 11f, 0);
         nextBlock = Instantiate(prefabBlocks[rnd], setupPosition, Quaternion.identity);
-        nextBlock.Initialize(this, 1);
+        nextBlock.Initialize(this, currentFallSpeed);
         nextBlock.enabled = false;
     }
 
@@ -116,5 +150,98 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
             return null;
         }
         return fieldTiles[index.x, index.y];
+    }
+
+    // Check and clear completed lines
+    void CheckAndClearLines()
+    {
+        int linesCleared = 0;
+
+        for (int y = 0; y < FieldHeight; y++)
+        {
+            if (IsLineFilled(y))
+            {
+                ClearLine(y);
+                DropBlocksAboveLine(y);
+                y--; // Recheck the same line after dropping blocks
+                linesCleared++;
+            }
+        }
+
+        if (linesCleared > 0)
+        {
+            GameManager.Instance.AddScore(linesCleared);
+        }
+    }
+
+    // Check if line is completely filled
+    bool IsLineFilled(int y)
+    {
+        for (int x = 0; x < FieldWidth; x++)
+        {
+            if (fieldTiles[x, y] == null)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Clear a single line
+    void ClearLine(int y)
+    {
+        for (int x = 0; x < FieldWidth; x++)
+        {
+            if (fieldTiles[x, y] != null)
+            {
+                Destroy(fieldTiles[x, y].gameObject);
+                fieldTiles[x, y] = null;
+            }
+        }
+    }
+
+    // Drop blocks above the cleared line
+    void DropBlocksAboveLine(int clearedLine)
+    {
+        for (int y = clearedLine + 1; y < FieldHeight; y++)
+        {
+            for (int x = 0; x < FieldWidth; x++)
+            {
+                if (fieldTiles[x, y] != null)
+                {
+                    // Move block down in the grid
+                    fieldTiles[x, y - 1] = fieldTiles[x, y];
+                    fieldTiles[x, y] = null;
+
+                    // Update visual position
+                    fieldTiles[x, y - 1].position += Vector3.down;
+                }
+            }
+        }
+    }
+
+    // Game state management methods
+    private void GameOver()
+    {
+        isGameActive = false;
+        GameManager.Instance.GameOver();
+    }
+
+    public void RestartGame()
+    {
+        InitializeGame();
+    }
+
+    public void UpdateFallSpeed(float newSpeed)
+    {
+        currentFallSpeed = newSpeed;
+        if (currentBlock != null)
+        {
+            currentBlock.UpdateFallSpeed(currentFallSpeed);
+        }
+        if (nextBlock != null)
+        {
+            nextBlock.UpdateFallSpeed(currentFallSpeed);
+        }
     }
 }
