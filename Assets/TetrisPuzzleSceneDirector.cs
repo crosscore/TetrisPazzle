@@ -8,16 +8,11 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
     const int FieldWidth = 10;
     const int FieldHeight = 20;
 
-    // Block prefabs collection
     [SerializeField] List<BlockController> prefabBlocks;
-    // Next block to spawn
     BlockController nextBlock;
-    // Currently active block
     BlockController currentBlock;
-    // Grid of placed blocks
     Transform[,] fieldTiles;
 
-    // Game state and speed management
     private float currentFallSpeed = 1.0f;
     private bool isGameActive = true;
 
@@ -28,12 +23,10 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
 
     private void InitializeGame()
     {
-        // Initialize the playing field
         fieldTiles = new Transform[FieldWidth, FieldHeight];
         isGameActive = true;
         currentFallSpeed = 1.0f;
 
-        // Clear existing blocks if any
         var existingBlocks = FindObjectsByType<BlockController>(FindObjectsSortMode.None);
         foreach (var block in existingBlocks)
         {
@@ -46,46 +39,50 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
 
     void Update()
     {
-        if (!isGameActive) return;
+        if (!isGameActive || currentBlock == null) return;
 
-        // Continue if current block is still active
-        if (currentBlock.enabled) return;
-
-        // Place the block in the field grid
-        Transform[] blockParts = currentBlock.GetAllBlockParts();
-        foreach (Transform item in blockParts)
+        if (!currentBlock.enabled)
         {
-            Vector2Int index = GetIndexPosition(item.position);
-            // Check if position is within bounds
-            if (IsWithinField(index))
-            {
-                fieldTiles[index.x, index.y] = item;
+            Transform[] blockParts = currentBlock.GetAllBlockParts();
 
-                // Check for game over - if block is placed at or above the top of the field
-                if (index.y >= FieldHeight - 2)
-                {
-                    GameOver();
-                    return;
-                }
-            }
-            else
+            // Simplified game over check
+            if (IsGameOver(blockParts))
             {
                 GameOver();
                 return;
             }
-        }
 
-        // Check and clear any completed lines
-        CheckAndClearLines();
-
-        // Spawn next block if game is still active
-        if (isGameActive)
-        {
+            // Place block safely
+            PlaceBlock(blockParts);
+            CheckAndClearLines();
             SpawnBlock();
         }
     }
 
-    // Convert world position to grid index
+    // New method: Consolidated game over check
+    private bool IsGameOver(Transform[] blockParts)
+    {
+        foreach (Transform part in blockParts)
+        {
+            Vector2Int index = GetIndexPosition(part.position);
+            if (!IsWithinField(index) || GetFieldTile(index) != null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // New method: Safe block placement
+    private void PlaceBlock(Transform[] blockParts)
+    {
+        foreach (Transform part in blockParts)
+        {
+            Vector2Int index = GetIndexPosition(part.position);
+            fieldTiles[index.x, index.y] = part;
+        }
+    }
+
     Vector2Int GetIndexPosition(Vector3 worldPosition)
     {
         Vector2Int index = new Vector2Int();
@@ -94,27 +91,17 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
         return index;
     }
 
-    // Check if position is within field boundaries
     bool IsWithinField(Vector2Int index)
     {
         return index.x >= 0 && index.x < FieldWidth && index.y >= 0 && index.y < FieldHeight;
     }
 
-    // Check if movement is valid
     public bool IsMovable(Transform[] blockTransforms)
     {
         foreach (Transform item in blockTransforms)
         {
             Vector2Int index = GetIndexPosition(item.position);
-
-            // Check boundaries
-            if (!IsWithinField(index))
-            {
-                return false;
-            }
-
-            // Check collision with existing blocks
-            if (GetFieldTile(index) != null)
+            if (!IsWithinField(index) || GetFieldTile(index) != null)
             {
                 return false;
             }
@@ -122,7 +109,6 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
         return true;
     }
 
-    // Generate the next block
     void SetupNextBlock()
     {
         int rnd = Random.Range(0, prefabBlocks.Count);
@@ -132,17 +118,23 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
         nextBlock.enabled = false;
     }
 
-    // Spawn block into play field
     void SpawnBlock()
     {
-        Vector3 spawnPosition = new Vector3(0.5f, 8.5f, 0);
+        Vector3 initialPosition = new Vector3(0.5f, 8.5f, 0);
         currentBlock = nextBlock;
-        currentBlock.transform.position = spawnPosition;
+        currentBlock.transform.position = initialPosition;
+
+        // Single game over check at spawn
+        if (IsGameOver(currentBlock.GetAllBlockParts()))
+        {
+            GameOver();
+            return;
+        }
+
         currentBlock.enabled = true;
         SetupNextBlock();
     }
 
-    // Get tile at specified grid position
     Transform GetFieldTile(Vector2Int index)
     {
         if (!IsWithinField(index))
