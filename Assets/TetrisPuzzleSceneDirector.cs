@@ -9,12 +9,17 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
     const int FieldHeight = 20;
 
     [SerializeField] List<BlockController> prefabBlocks;
+    [SerializeField] AudioClip seStopBlock;
+    [SerializeField] AudioClip seClearLine;
     BlockController nextBlock;
     BlockController currentBlock;
     Transform[,] fieldTiles;
 
     private float currentFallSpeed = 1.0f;
     private bool isGameActive = true;
+
+    AudioSource audioSource;
+
 
     void Start()
     {
@@ -24,6 +29,7 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
     private void InitializeGame()
     {
         fieldTiles = new Transform[FieldWidth, FieldHeight];
+        audioSource = GetComponent<AudioSource>();
         isGameActive = true;
         currentFallSpeed = 1.0f;
 
@@ -59,6 +65,7 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
 
             // Place block safely
             PlaceBlock(blockParts);
+            audioSource.PlayOneShot(seStopBlock);
 
             // Clear lines and spawn next block
             CheckAndClearLines();
@@ -192,13 +199,19 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
     // Clear a single line
     void ClearLine(int y)
     {
+        bool isPlaySE = false;
         for (int x = 0; x < FieldWidth; x++)
         {
             if (fieldTiles[x, y] != null)
             {
                 Destroy(fieldTiles[x, y].gameObject);
                 fieldTiles[x, y] = null;
+                isPlaySE = true;
             }
+        }
+        if (isPlaySE)
+        {
+            audioSource.PlayOneShot(seClearLine);
         }
     }
 
