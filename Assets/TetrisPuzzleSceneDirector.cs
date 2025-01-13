@@ -1,33 +1,57 @@
+// TetrisPuzzleSceneDirector.cs
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class TetrisPuzzleSceneDirector : MonoBehaviour
 {
-    // field size
+    // Field dimensions
     const int FieldWidth = 10;
     const int FieldHeight = 20;
 
-    // prefab of blocks
+    // Block prefabs collection
     [SerializeField] List<BlockController> prefabBlocks;
-    // next block
+    // Next block to spawn
     BlockController nextBlock;
-    // current block
+    // Currently active block
     BlockController currentBlock;
+    // Grid of placed blocks
+    Transform[,] fieldTiles;
 
     void Start()
     {
-        // setup next block
+        // Initialize the playing field
+        fieldTiles = new Transform[FieldWidth, FieldHeight];
         SetupNextBlock();
-        // spawn block
         SpawnBlock();
     }
 
     void Update()
     {
+        // Continue if current block is still active
+        if (currentBlock.enabled) return;
 
+        // Place the block in the field grid
+        Transform[] blockParts = currentBlock.GetAllBlockParts();
+        foreach (Transform item in blockParts)
+        {
+            Vector2Int index = GetIndexPosition(item.position);
+            // Check if position is within bounds
+            if (IsWithinField(index))
+            {
+                fieldTiles[index.x, index.y] = item;
+            }
+            else
+            {
+                // Game over condition
+                Debug.LogWarning("Block placed outside field - Game Over");
+                // Add game over handling here
+                return;
+            }
+        }
+        SpawnBlock();
     }
-    // world position to field position
+
+    // Convert world position to grid index
     Vector2Int GetIndexPosition(Vector3 worldPosition)
     {
         Vector2Int index = new Vector2Int();
@@ -35,13 +59,28 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
         index.y = Mathf.RoundToInt(worldPosition.y - 0.5f) + FieldHeight / 2;
         return index;
     }
-    // 移動可能かどうか
+
+    // Check if position is within field boundaries
+    bool IsWithinField(Vector2Int index)
+    {
+        return index.x >= 0 && index.x < FieldWidth && index.y >= 0 && index.y < FieldHeight;
+    }
+
+    // Check if movement is valid
     public bool IsMovable(Transform[] blockTransforms)
     {
         foreach (Transform item in blockTransforms)
         {
             Vector2Int index = GetIndexPosition(item.position);
-            if (index.x < 0 || FieldWidth -1 < index.x || index.y < 0)
+
+            // Check boundaries
+            if (!IsWithinField(index))
+            {
+                return false;
+            }
+
+            // Check collision with existing blocks
+            if (GetFieldTile(index) != null)
             {
                 return false;
             }
@@ -49,30 +88,33 @@ public class TetrisPuzzleSceneDirector : MonoBehaviour
         return true;
     }
 
-    // 次のブロックを生成
+    // Generate the next block
     void SetupNextBlock()
     {
         int rnd = Random.Range(0, prefabBlocks.Count);
-        // setup position (out of the field)
         Vector3 setupPosition = new Vector3(2.5f, 11f, 0);
-        // generate next block
         nextBlock = Instantiate(prefabBlocks[rnd], setupPosition, Quaternion.identity);
-        // initialize the block
         nextBlock.Initialize(this, 1);
-        // don't move the block
         nextBlock.enabled = false;
     }
-    // ブロックをフィールドに表示
+
+    // Spawn block into play field
     void SpawnBlock()
     {
-        // setup position (top center)
         Vector3 spawnPosition = new Vector3(0.5f, 8.5f, 0);
-        // generate current block
         currentBlock = nextBlock;
         currentBlock.transform.position = spawnPosition;
-        // initialize the block
         currentBlock.enabled = true;
-        // setup next block
         SetupNextBlock();
+    }
+
+    // Get tile at specified grid position
+    Transform GetFieldTile(Vector2Int index)
+    {
+        if (!IsWithinField(index))
+        {
+            return null;
+        }
+        return fieldTiles[index.x, index.y];
     }
 }

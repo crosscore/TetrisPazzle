@@ -960,7 +960,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69b1b9acf21e2498b87cf3af01655788, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  prefabBlocks: []
+  prefabBlocks:
+  - {fileID: -5278811107958616340, guid: 9b21071d8ebde468aa982719f5ed36a2, type: 3}
+  - {fileID: -6953646332048261404, guid: 06b1dbcada7b849409e2d2a5434c9f13, type: 3}
+  - {fileID: 3058362581685216892, guid: 47e8a900f6d34475db61e020d908739a, type: 3}
+  - {fileID: 2009387177034640679, guid: 7cf0d2082ddbf404d9a876513635c490, type: 3}
+  - {fileID: 7826186852755965539, guid: fffb6e0fe20654bd1890621a9221b406, type: 3}
+  - {fileID: -9022264162133917467, guid: 90a0268e2bfd146cfbb0c58962ddf8d1, type: 3}
+  - {fileID: 1334922202293004614, guid: f66189b1bd1ab423ba8b387122c7a5bb, type: 3}
 --- !u!4 &1644447430
 Transform:
   m_ObjectHideFlags: 0
