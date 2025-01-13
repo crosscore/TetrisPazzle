@@ -50,7 +50,7 @@ public class GameManager : MonoBehaviour
 
     public void AddScore(int lineCount)
     {
-        currentScore += lineCount * 100;
+        currentScore += lineCount * 1000;
         UpdateScoreDisplay();
         CheckLevelUp();
     }
@@ -59,9 +59,13 @@ public class GameManager : MonoBehaviour
     {
         if (scoreText != null)
         {
-            scoreText.text = $"Score: {currentScore}";
+            // Format score with leading zeros and right alignment
+            scoreText.text = $"Score: {currentScore:D8}";
+
+            // Set text alignment to right
+            scoreText.alignment = TextAnchor.MiddleRight;
         }
-    }
+}
 
     private void CheckLevelUp()
     {
